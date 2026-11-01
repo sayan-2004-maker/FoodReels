@@ -1,0 +1,10 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const Report = require('../models/Report');
+const auth = require('../middleware/auth');
+const admin = require('../middleware/admin');
+const router = express.Router();
+router.post('/', auth, async (req, res) => { try { const { targetType, targetId, reason, detail = '' } = req.body; if (!['reel', 'user', 'comment'].includes(targetType) || !mongoose.isValidObjectId(targetId) || !['Spam', 'Inappropriate content', 'Copyright', 'Misleading content', 'Other'].includes(reason)) return res.status(400).json({ message: 'Invalid report' }); const report = await Report.create({ reporter: req.user._id, targetType, targetId, reason, detail: String(detail).slice(0, 500) }); res.status(201).json({ report }); } catch (error) { res.status(400).json({ message: error.message }); } });
+router.get('/', auth, admin, async (req, res) => { try { res.json({ reports: await Report.find().populate('reporter', 'name username avatar').sort({ createdAt: -1 }).lean() }); } catch (error) { res.status(500).json({ message: error.message }); } });
+router.patch('/:id', auth, admin, async (req, res) => { try { const report = await Report.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true, runValidators: true }); if (!report) return res.status(404).json({ message: 'Report not found' }); res.json({ report }); } catch (error) { res.status(400).json({ message: error.message }); } });
+module.exports = router;

@@ -1,0 +1,12 @@
+const express = require('express');
+const Reel = require('../models/Reel');
+const User = require('../models/User');
+const Recipe = require('../models/Recipe');
+const Restaurant = require('../models/Restaurant');
+const Hashtag = require('../models/Hashtag');
+const optionalAuth = require('../middleware/optionalAuth');
+const { reelCard, person } = require('../utils/serializers');
+const router = express.Router();
+const populated = q => q.populate('author', 'name username avatar bio location').populate('category', 'name slug icon').populate('hashtags', 'name usageCount').populate('restaurant', 'name location rating priceRange').populate('recipe');
+router.get('/', optionalAuth, async (req, res) => { try { const q = String(req.query.q || '').trim(); if (!q) return res.json({ users: [], reels: [], hashtags: [], recipes: [], restaurants: [] }); const re = new RegExp(q.slice(0, 80), 'i'); const [users, records, hashtags, recipes, restaurants] = await Promise.all([User.find({ $or: [{ name: re }, { username: re }, { bio: re }, { 'location.city': re }] }).select('name username avatar bio location').limit(8), populated(Reel.find({ status: 'published', $or: [{ title: re }, { caption: re }, { 'location.name': re }, { 'location.city': re }] }).limit(12)), Hashtag.find({ name: re }).sort({ usageCount: -1 }).limit(12), Recipe.find({ $or: [{ title: re }, { 'ingredients.name': re }, { 'location.city': re }] }).limit(8), Restaurant.find({ $or: [{ name: re }, { cuisine: re }, { 'location.name': re }, { 'location.city': re }, { address: re }] }).limit(8)]); res.json({ users: users.map(person), reels: await Promise.all(records.map(r => reelCard(r, req.user?._id))), hashtags, recipes, restaurants }); } catch (error) { res.status(500).json({ message: error.message }); } });
+module.exports = router;

@@ -1,0 +1,7 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+export default function Topbar({ user, onLogin, onLogout, onCreate }) {
+  const navigate = useNavigate(); const [search, setSearch] = useState('');
+  const submit = event => { event.preventDefault(); const value = search.trim(); if (value) navigate(`/search?q=${encodeURIComponent(value)}`); };
+  return <header className="topbar glass"><button className="brand" onClick={() => navigate('/')}><div className="brand-orb">✦</div><div><b>Food<span>Reels</span></b><small>FOOD VIDEO SOCIAL</small></div></button><form className="search-wrap" onSubmit={submit}><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search food, creators, recipes, city…"/><kbd>Enter</kbd></form><div className="top-actions"><button className="ghost-btn desktop-nav" onClick={() => navigate('/explore')}>Explore</button><button className="ghost-btn desktop-nav" onClick={() => user ? navigate('/notifications') : onLogin()}>Alerts</button>{user?.role === 'admin' && <button className="ghost-btn desktop-nav" onClick={() => navigate('/admin')}>Admin</button>}<button className="create-btn" onClick={() => user ? onCreate() : onLogin()}>＋ Create</button>{user ? <><button className="mini-user" onClick={() => navigate('/profile')}><img src={user.avatar} alt=""/><span>@{user.username}</span></button><button className="logout-btn" title="Log out" onClick={onLogout}>↪</button></> : <button className="ghost-btn" onClick={onLogin}>Sign in</button>}</div></header>;
+}

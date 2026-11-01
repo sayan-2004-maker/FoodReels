@@ -1,0 +1,13 @@
+const express = require('express');
+const Reel = require('../models/Reel');
+const User = require('../models/User');
+const Follow = require('../models/Follow');
+const Category = require('../models/Category');
+const Hashtag = require('../models/Hashtag');
+const Recipe = require('../models/Recipe');
+const optionalAuth = require('../middleware/optionalAuth');
+const { reelCard, person } = require('../utils/serializers');
+const router = express.Router();
+const populated = q => q.populate('author', 'name username avatar bio location').populate('category', 'name slug icon').populate('hashtags', 'name usageCount').populate('restaurant', 'name location rating priceRange').populate('recipe');
+router.get('/', optionalAuth, async (req, res) => { try { const [records, categories, hashtags, recipes, userScores] = await Promise.all([populated(Reel.find({ status: 'published' }).sort({ likeCount: -1, viewCount: -1 }).limit(18)), Category.find({ active: true }).sort({ name: 1 }), Hashtag.find().sort({ usageCount: -1 }).limit(12), Recipe.find().sort({ createdAt: -1 }).limit(8), Follow.aggregate([{ $group: { _id: '$following', followers: { $sum: 1 } } }, { $sort: { followers: -1 } }, { $limit: 8 }])]); const creatorIds = userScores.map(s => s._id); const people = await User.find({ _id: { $in: creatorIds } }).select('name username avatar bio location'); const indexed = new Map(people.map(p => [String(p._id), p])); res.json({ reels: await Promise.all(records.map(r => reelCard(r, req.user?._id))), categories, hashtags, recipes, creators: userScores.map(s => ({ ...person(indexed.get(String(s._id))), followers: s.followers })).filter(x => x.id) }); } catch (error) { res.status(500).json({ message: error.message }); } });
+module.exports = router;

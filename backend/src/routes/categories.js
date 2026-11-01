@@ -1,0 +1,11 @@
+const express = require('express');
+const Category = require('../models/Category');
+const auth = require('../middleware/auth');
+const admin = require('../middleware/admin');
+const router = express.Router();
+const slugify = value => String(value || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+router.get('/', async (req, res) => { try { res.json({ categories: await Category.find({ active: { $ne: false } }).sort({ name: 1 }).lean() }); } catch (error) { res.status(500).json({ message: error.message }); } });
+router.post('/', auth, admin, async (req, res) => { try { const category = await Category.create({ name: String(req.body.name || '').trim(), slug: slugify(req.body.slug || req.body.name), icon: String(req.body.icon || '🍽️'), image: String(req.body.image || '') }); res.status(201).json({ category }); } catch (error) { res.status(400).json({ message: error.message }); } });
+router.patch('/:id', auth, admin, async (req, res) => { try { const values = { ...req.body }; if (values.name && !values.slug) values.slug = slugify(values.name); const category = await Category.findByIdAndUpdate(req.params.id, values, { new: true, runValidators: true }); if (!category) return res.status(404).json({ message: 'Category not found' }); res.json({ category }); } catch (error) { res.status(400).json({ message: error.message }); } });
+router.delete('/:id', auth, admin, async (req, res) => { try { const result = await Category.deleteOne({ _id: req.params.id }); if (!result.deletedCount) return res.status(404).json({ message: 'Category not found' }); res.json({ message: 'Category deleted' }); } catch (error) { res.status(400).json({ message: error.message }); } });
+module.exports = router;

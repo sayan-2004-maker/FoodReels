@@ -1,0 +1,3 @@
+const mongoose = require('mongoose');
+const schema = new mongoose.Schema({ reporter: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, targetType: { type: String, enum: ['reel', 'user', 'comment'], required: true }, targetId: { type: mongoose.Schema.Types.ObjectId, required: true }, reason: { type: String, enum: ['Spam', 'Inappropriate content', 'Copyright', 'Misleading content', 'Other'], required: true }, detail: { type: String, maxlength: 500, default: '' }, status: { type: String, enum: ['open', 'reviewed', 'dismissed'], default: 'open' } }, { timestamps: true });
+module.exports = mongoose.model('Report', schema);
